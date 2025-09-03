@@ -3,96 +3,118 @@
     <h1>Tic Tac Toe</h1>
     
     <div v-if="showNameInput" class="player-input">
-      <input v-model="player1Name" placeholder="Nome Giocatore 1 (X)">
-      <input v-model="player2Name" placeholder="Nome Giocatore 2 (O)">
+      <input 
+        v-model="player1Name" 
+        placeholder="Nome Giocatore 1 (X)"
+        @keyup.enter="startGame"
+      >
+      <input 
+        v-model="player2Name" 
+        placeholder="Nome Giocatore 2 (O)"
+        @keyup.enter="startGame"
+      >
       <button @click="startGame">Inizia</button>
     </div>
 
     <div v-else class="game-board">
-      <h2 v-if="winner && winner !== 'Draw'">Ha vinto {{ winner === 'X' ? player1Name : player2Name }}! 🎉</h2>
+      <h2 v-if="winner && winner !== 'Draw'">
+        Ha vinto {{ winner === 'X' ? player1Name : player2Name }}! 🎉
+      </h2>
       <h2 v-else-if="winner === 'Draw'">Pareggio! 🤝</h2>
-      <h2 v-else>È il turno di: {{ currentPlayer === 'X' ? player1Name : player2Name }} ({{ currentPlayer }})</h2>
+      <h2 v-else>
+        È il turno di: {{ currentPlayer === 'X' ? player1Name : player2Name }} ({{ currentPlayer }})
+      </h2>
 
-      <div class="board">
-        <div
-          v-for="(cell, index) in board"
-          :key="index"
-          class="cell"
-          @click="handleCellClick(index)"
-        >
-          {{ cell }}
-        </div>
-      </div>
+      <TabelloneComponent
+        :board="board"
+        :game-ended="!!winner"
+        @move="handleMove"
+      />
       
       <button v-if="winner" @click="resetGame">Ricomincia</button>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'TicTacToe',
-  data() {
-    return {
-      board: ['', '', '', '', '', '', '', '', ''],
-      currentPlayer: 'X',
-      winner: null,
-      winningCombinations: [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8],
-        [0, 3, 6], [1, 4, 7], [2, 5, 8],
-        [0, 4, 8], [2, 4, 6]
-      ],
-      player1Name: 'Giocatore 1',
-      player2Name: 'Giocatore 2',
-      showNameInput: true,
-    };
-  },
-  methods: {
-    handleCellClick(index) {
-      if (this.board[index] !== '' || this.winner || this.showNameInput) {
-        return;
-      }
+<script setup>
+import { ref } from 'vue'
+import TabelloneComponent from './GameBoard.vue'
 
-      this.board.splice(index, 1, this.currentPlayer);
+// State reattivo usando Composition API
+const board = ref(['', '', '', '', '', '', '', '', ''])
+const currentPlayer = ref('X')
+const winner = ref(null)
+const player1Name = ref('Giocatore 1')
+const player2Name = ref('Giocatore 2')
+const showNameInput = ref(true)
 
-      this.checkWinner();
+// Combinazioni vincenti (può essere const perché non cambia mai)
+const winningCombinations = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8], // righe
+  [0, 3, 6], [1, 4, 7], [2, 5, 8], // colonne
+  [0, 4, 8], [2, 4, 6]             // diagonali
+]
 
-      if (!this.winner) {
-        this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
-      }
-    },
-    checkWinner() {
-      for (const combination of this.winningCombinations) {
-        const [a, b, c] = combination;
-        if (this.board[a] && this.board[a] === this.board[b] && this.board[a] === this.board[c]) {
-          this.winner = this.board[a];
-          return;
-        }
-      }
+// Funzioni del gioco
+const handleMove = (index) => {
+  // Controllo se la cella è già occupata o se il gioco è finito
+  if (board.value[index] !== '' || winner.value) {
+    return
+  }
 
-      if (!this.board.includes('')) {
-        this.winner = 'Draw';
-      }
-    },
-    resetGame() {
-      this.board = ['', '', '', '', '', '', '', '', ''];
-      this.currentPlayer = 'X';
-      this.winner = null;
-      this.player1Name = 'Giocatore 1';
-      this.player2Name = 'Giocatore 2';
-      this.showNameInput = true;
-    },
-    startGame() {
-      if (this.player1Name.trim() === '') {
-        this.player1Name = 'Giocatore 1';
-      }
-      if (this.player2Name.trim() === '') {
-        this.player2Name = 'Giocatore 2';
-      }
-      this.showNameInput = false;
+  // Aggiorna la cella con il giocatore corrente
+  board.value[index] = currentPlayer.value
+
+  // Controlla se c'è un vincitore
+  checkWinner()
+
+  // Se il gioco non è finito, cambia il turno
+  if (!winner.value) {
+    currentPlayer.value = currentPlayer.value === 'X' ? 'O' : 'X'
+  }
+}
+
+const checkWinner = () => {
+  // Controlla tutte le combinazioni vincenti
+  for (const combination of winningCombinations) {
+    const [a, b, c] = combination
+    if (
+      board.value[a] && 
+      board.value[a] === board.value[b] && 
+      board.value[a] === board.value[c]
+    ) {
+      winner.value = board.value[a]
+      return
     }
   }
-};
+
+  // Controlla se è pareggio (nessuna cella vuota)
+  if (!board.value.includes('')) {
+    winner.value = 'Draw'
+  }
+}
+
+const startGame = () => {
+  // Usa nomi di default se i campi sono vuoti
+  if (player1Name.value.trim() === '') {
+    player1Name.value = 'Giocatore 1'
+  }
+  if (player2Name.value.trim() === '') {
+    player2Name.value = 'Giocatore 2'
+  }
+  
+  showNameInput.value = false
+}
+
+const resetGame = () => {
+  // Reset dello stato di gioco
+  board.value = ['', '', '', '', '', '', '', '', '']
+  currentPlayer.value = 'X'
+  winner.value = null
+  player1Name.value = 'Giocatore 1'
+  player2Name.value = 'Giocatore 2'
+  showNameInput.value = true
+}
 </script>
 
 <style scoped>
@@ -145,38 +167,6 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.board {
-  display: grid;
-  grid-template-columns: repeat(3, 100px);
-  grid-template-rows: repeat(3, 100px);
-  gap: 8px;
-  margin-bottom: 30px;
-  background: #fff;
-  padding: 8px;
-  border-radius: 10px;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-}
-
-.cell {
-  width: 100px;
-  height: 100px;
-  background-color: #f8f9fa;
-  border: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 4em;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-  border-radius: 5px;
-  color: #2c3e50;
-}
-
-.cell:hover {
-  background-color: #e2e6ea;
 }
 
 button {
